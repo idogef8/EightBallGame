@@ -15,7 +15,7 @@ def create_ball(space, position, radius):
     body.position = position
     shape = pymunk.Circle(body, radius)
     shape.elasticity = 0.95
-    shape.friction = 0.9  # Adding friction to the shape
+    shape.friction = 0.85  # Adding friction to the shape
     shape.damping = 0.5  # Increasing damping for more noticeable effect
     space.add(body, shape)
     return body
@@ -103,11 +103,15 @@ while True:
         position = shape.body.position
         pygame.draw.circle(screen, (0, 0, 255), (int(position.x), int(position.y)), radius)
 
+        # Check if the test ball is not moving
+    if test_ball.velocity.length < 1:  # Check if the speed is less than 1
         # Draw the cue stick
-    cue_start = (ball_pos.x, ball_pos.y)
-    cue_end = (ball_pos.x + cue_length * math.cos(cue_angle),
-               ball_pos.y + cue_length * math.sin(cue_angle))
-    pygame.draw.line(screen, 'black', cue_start, cue_end, 5)
+        cue_start = (ball_pos.x, ball_pos.y)
+        cue_end = (ball_pos.x + cue_length * math.cos(cue_angle),
+                       ball_pos.y + cue_length * math.sin(cue_angle))
+        pygame.draw.line(screen, 'black', cue_start, cue_end, 5)
+
+        pygame.draw.line(screen, 'black', cue_start, cue_end, 5)
     # In your main loop, apply friction to each ball
     # for shape in space.shapes:
     #     if isinstance(shape, pymunk.Circle):  # Assuming your balls are Circles
