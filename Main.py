@@ -44,15 +44,22 @@ segment_shape.elasticity = 0.85
 segment_shape.friction = 0.9
 space.add(segment_body_left, segment_shape)
 
-test_ball = create_ball(space, (200, (((2*screen.get_height()) - 700)/2)), 10)
-test_ball.velocity = (600, 0)
+test_ball = pymunk.Body(1, pymunk.moment_for_circle(1, 0, 18))
+test_ball.position = (200, (((2*screen.get_height()) - 700)/2))
+test_shape = pymunk.Circle(test_ball, 18)
+test_shape.elasticity = 0.95
+test_shape.friction = 0.85  # Adding friction to the shape
+test_shape.damping = 0.5  # Increasing damping for more noticeable effect
+space.add(test_ball, test_shape)
 
 # Cue stick properties
-cue_length = 100
+cue_length = 300
 cue_angle = 0
+pull_back_distance = 0
+is_pulling_back = False
 
 rows = 5
-radius = 10
+radius = 18
 
 # Create balls in a triangular formation
 for row in range(rows):
@@ -78,6 +85,26 @@ while True:
         if event.type == pygame.QUIT:
             pygame.quit()
             raise SystemExit
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                is_pulling_back = True
+                pull_back_distance = 0  # Reset the pull back distance
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_SPACE:
+                # Calculate the force to apply based on the pull back distance
+                force_magnitude = pull_back_distance * 100  # Adjust the multiplier as needed
+                force_vector = -Vec2d(math.cos(cue_angle), math.sin(cue_angle)) * force_magnitude
+                test_ball.apply_impulse_at_local_point(force_vector, (0, 0))
+                is_pulling_back = False
+
+
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        ball_pos = test_ball.position
+        cue_angle = math.atan2(mouse_y - (screen.get_height() - ball_pos.y), mouse_x - ball_pos.x)
+
+        if is_pulling_back:
+            pull_back_distance += 1  # Increment pull back distance while the key is held down
+
 
     # Do logical updates here.
     # ...
@@ -101,7 +128,11 @@ while True:
 
     for shape in space.shapes:
         position = shape.body.position
-        pygame.draw.circle(screen, (0, 0, 255), (int(position.x), int(position.y)), radius)
+        pygame.draw.circle(screen, (0, 0, 0), (int(position.x), int(position.y)), radius)
+
+
+    pygame.draw.circle(screen, (0, 0, 255), (int(test_ball.position.x), int(test_ball.position.y)), 18)
+
 
         # Check if the test ball is not moving
     if test_ball.velocity.length < 1:  # Check if the speed is less than 1
@@ -109,9 +140,9 @@ while True:
         cue_start = (ball_pos.x, ball_pos.y)
         cue_end = (ball_pos.x + cue_length * math.cos(cue_angle),
                        ball_pos.y + cue_length * math.sin(cue_angle))
-        pygame.draw.line(screen, 'black', cue_start, cue_end, 5)
+        pygame.draw.line(screen, 'black', cue_start, cue_end, 10)
 
-        pygame.draw.line(screen, 'black', cue_start, cue_end, 5)
+        pygame.draw.line(screen, 'black', cue_start, cue_end, 10)
     # In your main loop, apply friction to each ball
     # for shape in space.shapes:
     #     if isinstance(shape, pymunk.Circle):  # Assuming your balls are Circles
