@@ -15,11 +15,12 @@ def create_ball(space, position, radius):
     body.position = position
     shape = pymunk.Circle(body, radius)
     shape.elasticity = 0.95
-    shape.friction = 0.85  # Adding friction to the shape
+    shape.friction = 1  # Adding friction to the shape
     shape.damping = 0.5  # Increasing damping for more noticeable effect
     space.add(body, shape)
     return body
 
+# Adding collision shapes for the table
 segment_body_bottom = pymunk.Body(body_type=pymunk.Body.STATIC)
 segment_shape = pymunk.Segment(segment_body_bottom, (75, screen.get_height() - 100), (screen.get_width() - 75, screen.get_height() - 100), 5)
 segment_shape.elasticity = 0.85
@@ -44,6 +45,16 @@ segment_shape.elasticity = 0.85
 segment_shape.friction = 0.9
 space.add(segment_body_left, segment_shape)
 
+# Collision shapes for the pockets
+pocket_positions = [
+    (75, screen.get_height() - 100),  # Bottom left corner
+    (screen.get_width() - 75, screen.get_height() - 100),  # Bottom right corner
+    (75, screen.get_height() - 600),  # Top left corner
+    (screen.get_width() - 75, screen.get_height() - 600),  # Top right corner
+    (screen.get_width() // 2, screen.get_height() - 100),  # Bottom middle
+    (screen.get_width() // 2, screen.get_height() - 600)   # Top middle
+]
+
 test_ball = pymunk.Body(1, pymunk.moment_for_circle(1, 0, 18))
 test_ball.position = (200, (((2*screen.get_height()) - 700)/2))
 test_shape = pymunk.Circle(test_ball, 18)
@@ -52,6 +63,19 @@ test_shape.friction = 0.85  # Adding friction to the shape
 test_shape.damping = 0.5  # Increasing damping for more noticeable effect
 space.add(test_ball, test_shape)
 
+def create_pocket(space, position, radius):
+    body = pymunk.Body(body_type=pymunk.Body.STATIC)  # Pockets are static
+    shape = pymunk.Circle(body, radius)
+    shape.position = position
+    shape.elasticity = 0.0  # Pockets don't bounce
+    shape.friction = 0.0
+    space.add(body, shape)
+    return shape
+
+# Create pockets in the physics space
+pocket_radius = 15  # Adjust as necessary
+pockets = [create_pocket(space, pos, pocket_radius) for pos in pocket_positions]
+
 # Cue stick properties
 cue_length = 300
 cue_angle = 0
@@ -59,7 +83,7 @@ pull_back_distance = 0
 is_pulling_back = False
 
 rows = 5
-radius = 18
+radius = 25
 
 # Create balls in a triangular formation
 for row in range(rows):
@@ -72,6 +96,16 @@ for row in range(rows):
 
 def convert_coordinates(point): # converting pygame coordinates to pymunk coordinates (pymunk coordinates put the origin in the bottom left corner
     return point[0], screen.get_height() - point[1]
+
+def check_pocket_collisions(ball, pockets, pocket_radius):
+    for pocket in pockets:
+        # Calculate the distance between the ball's position and the pocket's position
+        distance = (ball.body.position - pocket.body.position).length
+        # Check if the distance is less than the sum of the radii
+        if distance < (ball.radius + pocket_radius):
+            return True  # Ball is in the pocket
+    return False  # No collision detected
+
 
 
 class Ball(pygame.Rect):
@@ -91,11 +125,12 @@ while True:
                 pull_back_distance = 0  # Reset the pull back distance
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_SPACE:
-                # Calculate the force to apply based on the pull back distance
-                force_magnitude = pull_back_distance * 100  # Adjust the multiplier as needed
-                force_vector = -Vec2d(math.cos(cue_angle), math.sin(cue_angle)) * force_magnitude
-                test_ball.apply_impulse_at_local_point(force_vector, (0, 0))
-                is_pulling_back = False
+                if test_ball.velocity.x == 0 and test_ball.velocity.y == 0:
+                    # Calculate the force to apply based on the pull back distance
+                    force_magnitude = pull_back_distance * 100  # Adjust the multiplier as needed
+                    force_vector = -Vec2d(math.cos(cue_angle), math.sin(cue_angle)) * force_magnitude
+                    test_ball.apply_impulse_at_local_point(force_vector, (0, 0))
+                    is_pulling_back = False
 
 
         mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -108,8 +143,13 @@ while True:
 
     # Do logical updates here.
     # ...
+    for shape in space.shapes:
+        # Check for pocket collisions
+        if check_pocket_collisions(shape, pockets, pocket_radius):
+            print("Ball in pocket!")
+            space.remove(shape)  # Remove the ball from the simulation
 
-        # Update cue stick angle based on mouse position
+    # Update cue stick angle based on mouse position
     mouse_x, mouse_y = pygame.mouse.get_pos()
     ball_pos = test_ball.position
     angle = math.atan2(mouse_y - (screen.get_height() - ball_pos.y), mouse_x - ball_pos.x)
@@ -120,18 +160,29 @@ while True:
     # Render the graphics here.
     # ...
 
-
+    # drawing sides of pool table
     pygame.draw.line(screen, 'black', (75, screen.get_height() - 100), (screen.get_width() - 75, screen.get_height() - 100), 5 )
     pygame.draw.line(screen, 'black', (screen.get_width() - 75, screen.get_height() - 100), (screen.get_width() - 75, screen.get_height() - 600), 5 )
     pygame.draw.line(screen, 'black', (screen.get_width() - 75, screen.get_height() - 600), (75, screen.get_height() - 600), 5 )
     pygame.draw.line(screen, 'black', (75, screen.get_height() - 600), (75, screen.get_height() - 100), 5 )
 
+    # drawing pockets of pool table
+    for pos in pocket_positions:
+        pygame.draw.circle(screen, (0, 0, 0), pos, pocket_radius)  # Draw the pockets as black circles
+
+    count = 0
     for shape in space.shapes:
         position = shape.body.position
-        pygame.draw.circle(screen, (0, 0, 0), (int(position.x), int(position.y)), radius)
+        if count % 2 == 0:
+            color = (255, 0, 0)
+            count += 1
+        else:
+            color = (0, 0, 255)
+            count += 1
 
+        pygame.draw.circle(screen, color, (int(position.x), int(position.y)), radius)
 
-    pygame.draw.circle(screen, (0, 0, 255), (int(test_ball.position.x), int(test_ball.position.y)), 18)
+    pygame.draw.circle(screen, (255, 0, 255), (int(test_ball.position.x), int(test_ball.position.y)), 18)
 
 
         # Check if the test ball is not moving
@@ -150,5 +201,5 @@ while True:
 
 
     pygame.display.flip()  # Refresh on-screen display
-    clock.tick(60) # wait until next frame (at 60 FPS)
-    space.step(1/60) # running the simulation
+    clock.tick(144) # wait until next frame (at 60 FPS)
+    space.step(1/144) # running the simulation
