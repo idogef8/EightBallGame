@@ -1,4 +1,5 @@
 import pygame, pymunk, math
+from pymunk import Vec2d
 from pymunk.vec2d import Vec2d
 
 pygame.init()
@@ -8,14 +9,13 @@ screen = pygame.display.set_mode((1280,720))
 clock = pygame.time.Clock()
 
 space = pymunk.Space() # initialized the space in which the physics sim occurs
-space.damping = .8
+space.damping = .6
 
 def create_ball(space, position, radius):
     body = pymunk.Body(1, pymunk.moment_for_circle(1, 0, radius))
     body.position = position
     shape = pymunk.Circle(body, radius)
     shape.elasticity = 0.95
-    shape.friction = 0.85  # Adding friction to the shape
     shape.damping = 0.5  # Increasing damping for more noticeable effect
     space.add(body, shape)
     return body
@@ -48,9 +48,30 @@ test_ball = pymunk.Body(1, pymunk.moment_for_circle(1, 0, 18))
 test_ball.position = (200, (((2*screen.get_height()) - 700)/2))
 test_shape = pymunk.Circle(test_ball, 18)
 test_shape.elasticity = 0.95
-test_shape.friction = 0.85  # Adding friction to the shape
 test_shape.damping = 0.5  # Increasing damping for more noticeable effect
 space.add(test_ball, test_shape)
+
+pocket_positions = [
+    (75, screen.get_height() - 100),  # Bottom left corner
+    (screen.get_width() - 75, screen.get_height() - 100),  # Bottom right corner
+    (75, screen.get_height() - 600),  # Top left corner
+    (screen.get_width() - 75, screen.get_height() - 600),  # Top right corner
+    (screen.get_width() // 2, screen.get_height() - 100),  # Bottom middle
+    (screen.get_width() // 2, screen.get_height() - 600)   # Top middle
+]
+
+def create_pocket(space, position, radius):
+    body = pymunk.Body(body_type=pymunk.Body.STATIC)  # Pockets are static
+    shape = pymunk.Circle(body, radius)
+    shape.position = position
+    shape.elasticity = 0.0  # Pockets don't bounce
+    shape.friction = 0.0
+    space.add(body, shape)
+    return shape
+
+# # Create pockets in the physics space
+# pocket_radius = 0  # Adjust as necessary
+# pockets = [create_pocket(space, pos, pocket_radius) for pos in pocket_positions]
 
 # Cue stick properties
 cue_length = 300
@@ -87,33 +108,36 @@ while True:
             raise SystemExit
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
-                is_pulling_back = True
-                pull_back_distance = 0  # Reset the pull back distance
+                if test_ball.velocity.x < 1 and test_ball.velocity.y < 1:
+                    is_pulling_back = True
+                    pull_back_distance = 0  # Reset the pullback distance
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_SPACE:
-                # Calculate the force to apply based on the pull back distance
-                force_magnitude = pull_back_distance * 100  # Adjust the multiplier as needed
-                force_vector = -Vec2d(math.cos(cue_angle), math.sin(cue_angle)) * force_magnitude
-                test_ball.apply_impulse_at_local_point(force_vector, (0, 0))
-                is_pulling_back = False
+                if test_ball.velocity.x < 1 and test_ball.velocity.y < 1:
+                    # Calculate the force to apply based on the pullback distance
+                    direction = test_ball.position - (pygame.mouse.get_pos())
+                    direction = direction.normalized()
+                    force_magnitude = pull_back_distance * 100  # Adjust the multiplier as needed
+                    force_vector = direction*force_magnitude #-Vec2d(math.cos(cue_angle), math.sin(cue_angle)) * force_magnitude
+                    # test_ball.apply_impulse_at_local_point(force_vector, (0, 0))
+                    test_ball.apply_impulse_at_world_point(force_vector, (0, 0))
+                    is_pulling_back = False
+                    force_vector = 0
 
 
-        mouse_x, mouse_y = pygame.mouse.get_pos()
-        ball_pos = test_ball.position
-        cue_angle = math.atan2(mouse_y - (screen.get_height() - ball_pos.y), mouse_x - ball_pos.x)
 
-        if is_pulling_back:
-            pull_back_distance += 1  # Increment pull back distance while the key is held down
+    mouse_x, mouse_y = pygame.mouse.get_pos()
+    mouse_pos = Vec2d(mouse_x, mouse_y)
+    ball_pos = test_ball.position
+    cue_angle = math.atan2(mouse_y - (screen.get_height() - ball_pos.y), mouse_x - ball_pos.x)
+
+    if is_pulling_back and pull_back_distance <= 20:
+        pull_back_distance += 1  # Increment pull back distance while the key is held down
 
 
     # Do logical updates here.
     # ...
 
-        # Update cue stick angle based on mouse position
-    mouse_x, mouse_y = pygame.mouse.get_pos()
-    ball_pos = test_ball.position
-    angle = math.atan2(mouse_y - (screen.get_height() - ball_pos.y), mouse_x - ball_pos.x)
-    cue_angle = angle
 
     screen.fill("white")  # Fill the display with a solid color
 
@@ -138,8 +162,10 @@ while True:
     if test_ball.velocity.length < 1:  # Check if the speed is less than 1
         # Draw the cue stick
         cue_start = (ball_pos.x, ball_pos.y)
-        cue_end = (ball_pos.x + cue_length * math.cos(cue_angle),
-                       ball_pos.y + cue_length * math.sin(cue_angle))
+        cue_vector = ball_pos - pygame.mouse.get_pos()
+        cue_vector = cue_vector.normalized()
+        cue_end = cue_start + -cue_vector * cue_length#(ball_pos.x + cue_length * math.cos(cue_angle),
+                   #    ball_pos.y + cue_length * math.sin(cue_angle))
         pygame.draw.line(screen, 'black', cue_start, cue_end, 10)
 
         pygame.draw.line(screen, 'black', cue_start, cue_end, 10)
@@ -150,5 +176,5 @@ while True:
 
 
     pygame.display.flip()  # Refresh on-screen display
-    clock.tick(60) # wait until next frame (at 60 FPS)
-    space.step(1/60) # running the simulation
+    clock.tick(120) # wait until next frame (at 60 FPS)
+    space.step(1/120) # 60 FPS
