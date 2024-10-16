@@ -16,7 +16,6 @@ def create_ball(space, position, radius):
     body.position = position
     shape = pymunk.Circle(body, radius)
     shape.elasticity = 0.95
-    shape.friction = 0.85  # Adding friction to the shape
     shape.damping = 0.5  # Increasing damping for more noticeable effect
     space.add(body, shape)
     return body
@@ -107,7 +106,7 @@ while True:
     ball_pos = test_ball.position
     cue_angle = math.atan2(mouse_y - (screen.get_height() - ball_pos.y), mouse_x - ball_pos.x)
 
-    if is_pulling_back and pull_back_distance <= 20:
+    if is_pulling_back and pull_back_distance <= 15:
         pull_back_distance += 1  # Increment pull back distance while the key is held down
 
 
