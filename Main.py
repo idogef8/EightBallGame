@@ -24,25 +24,21 @@ def create_ball(space, position, radius):
 segment_body_bottom = pymunk.Body(body_type=pymunk.Body.STATIC)
 segment_shape = pymunk.Segment(segment_body_bottom, (75, screen.get_height() - 100), (screen.get_width() - 75, screen.get_height() - 100), 5)
 segment_shape.elasticity = 0.85
-segment_shape.friction = 0.9
 space.add(segment_body_bottom, segment_shape)
 
 segment_body_right = pymunk.Body(body_type=pymunk.Body.STATIC)
 segment_shape = pymunk.Segment(segment_body_right, (screen.get_width() - 75, screen.get_height() - 100), (screen.get_width() - 75, screen.get_height() - 600), 5)
 segment_shape.elasticity = 0.85
-segment_shape.friction = 0.9
 space.add(segment_body_right, segment_shape)
 
 segment_body_top = pymunk.Body(body_type=pymunk.Body.STATIC)
 segment_shape = pymunk.Segment(segment_body_top, (screen.get_width() - 75, screen.get_height() - 600), (75, screen.get_height() - 600), 5)
 segment_shape.elasticity = 0.85
-segment_shape.friction = 0.9
 space.add(segment_body_top, segment_shape)
 
 segment_body_left = pymunk.Body(body_type=pymunk.Body.STATIC)
 segment_shape = pymunk.Segment(segment_body_left, (75, screen.get_height() - 600), (75, screen.get_height() - 100), 5)
 segment_shape.elasticity = 0.85
-segment_shape.friction = 0.9
 space.add(segment_body_left, segment_shape)
 
 test_ball = pymunk.Body(1, pymunk.moment_for_circle(1, 0, 18))
