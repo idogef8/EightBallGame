@@ -10,6 +10,10 @@ clock = pygame.time.Clock()
 
 space = pymunk.Space() # initialized the space in which the physics sim occurs
 space.damping = .6
+ball_list = []
+
+COLLISION_TYPE_BALL = 1
+COLLISION_TYPE_POCKET = 2
 
 def create_ball(space, position, radius):
     body = pymunk.Body(1, pymunk.moment_for_circle(1, 0, radius))
@@ -18,6 +22,7 @@ def create_ball(space, position, radius):
     shape.elasticity = 0.95
     shape.damping = 0.5  # Increasing damping for more noticeable effect
     space.add(body, shape)
+    shape.collision_type = COLLISION_TYPE_BALL
     return body
 
 segment_body_bottom = pymunk.Body(body_type=pymunk.Body.STATIC)
@@ -54,6 +59,28 @@ cue_angle = 0
 pull_back_distance = 0
 is_pulling_back = False
 
+# Create pockets
+pocket_radius = 30
+pocket_positions = [
+    (75, screen.get_height() - 100),  # Bottom left
+    (screen.get_width() - 75, screen.get_height() - 100),  # Bottom right
+    (75, screen.get_height() - 600),  # Top left
+    (screen.get_width() - 75, screen.get_height() - 600),  # Top right
+    (screen.get_width() / 2, screen.get_height() - 600),  # Center top
+    (screen.get_width() / 2, screen.get_height() - 100)  # Bottom middle
+]
+
+pockets = []
+for position in pocket_positions:
+    pocket_body = pymunk.Body(body_type=pymunk.Body.STATIC)
+    pocket_shape = pymunk.Circle(pocket_body, pocket_radius)
+    pocket_shape.elasticity = 0.0  # Pockets should not bounce
+    pocket_shape.sensor = True  # Use as a sensor
+    pocket_body.position = position
+    pocket_shape.collision_type = COLLISION_TYPE_POCKET
+    space.add(pocket_body, pocket_shape)
+    pockets.append(pocket_shape)
+
 rows = 5
 radius = 18
 
@@ -63,7 +90,8 @@ for row in range(rows):
         # Calculate the position of each ball
         x = row * (radius * 2) + 900  # Positioning vertically (now horizontal)
         y = (col - row / 2) * (radius * 2) + (((2*screen.get_height()) - 700)/2)  # Centering the triangle vertically
-        create_ball(space, (x, y), radius)
+        ball_list.append(create_ball(space, (x, y), radius))
+
 
 
 def convert_coordinates(point): # converting pygame coordinates to pymunk coordinates (pymunk coordinates put the origin in the bottom left corner
@@ -74,6 +102,21 @@ class Ball(pygame.Rect):
     def __init__(self, x, y):
         super().__init__(x, y)
 
+# Define a collision handler
+def collision_handler(arbiter, space, data):
+    # Get the bodies involved in the collision
+    body1, body2 = arbiter.shapes[0].body, arbiter.shapes[1].body
+
+    # Remove the body from the space
+    space.remove(body1, arbiter.shapes[0])  # Remove the first body and its shape
+
+    print("Bodies removed due to collision!")
+    return True  # Return True to keep the collision from being resolved
+
+
+# Set up the collision handler in the space
+handler = space.add_collision_handler(COLLISION_TYPE_BALL, COLLISION_TYPE_POCKET)
+handler.begin = collision_handler
 
 while True:
     # Process player inputs.
@@ -114,6 +157,8 @@ while True:
     # ...
 
 
+
+
     screen.fill("white")  # Fill the display with a solid color
 
     # Render the graphics here.
@@ -129,6 +174,10 @@ while True:
         position = shape.body.position
         pygame.draw.circle(screen, (0, 0, 0), (int(position.x), int(position.y)), radius)
 
+    # Draw pockets
+    for pocket in pockets:
+        position = pocket.body.position
+        pygame.draw.circle(screen, (100, 100, 100), (int(position.x), int(position.y)), pocket_radius)
 
     pygame.draw.circle(screen, (0, 0, 255), (int(test_ball.position.x), int(test_ball.position.y)), 18)
 
