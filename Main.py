@@ -9,7 +9,14 @@ screen = pygame.display.set_mode((1280,720))
 clock = pygame.time.Clock()
 
 space = pymunk.Space() # initialized the space in which the physics sim occurs
-space.damping = .6
+space.damping = 0.6
+ball_list = []
+COLLISION_TYPE_BALL = 1
+COLLISION_TYPE_POCKET = 2
+
+solid = []
+stripes = []
+ball_list = []
 
 def create_ball(space, position, radius):
     body = pymunk.Body(1, pymunk.moment_for_circle(1, 0, radius))
@@ -18,60 +25,36 @@ def create_ball(space, position, radius):
     shape.elasticity = 0.95
     shape.damping = 0.5  # Increasing damping for more noticeable effect
     space.add(body, shape)
+    shape.collision_type = COLLISION_TYPE_BALL
     return body
 
 segment_body_bottom = pymunk.Body(body_type=pymunk.Body.STATIC)
 segment_shape = pymunk.Segment(segment_body_bottom, (75, screen.get_height() - 100), (screen.get_width() - 75, screen.get_height() - 100), 5)
 segment_shape.elasticity = 0.85
-segment_shape.friction = 0.9
 space.add(segment_body_bottom, segment_shape)
 
 segment_body_right = pymunk.Body(body_type=pymunk.Body.STATIC)
 segment_shape = pymunk.Segment(segment_body_right, (screen.get_width() - 75, screen.get_height() - 100), (screen.get_width() - 75, screen.get_height() - 600), 5)
 segment_shape.elasticity = 0.85
-segment_shape.friction = 0.9
 space.add(segment_body_right, segment_shape)
 
 segment_body_top = pymunk.Body(body_type=pymunk.Body.STATIC)
 segment_shape = pymunk.Segment(segment_body_top, (screen.get_width() - 75, screen.get_height() - 600), (75, screen.get_height() - 600), 5)
 segment_shape.elasticity = 0.85
-segment_shape.friction = 0.9
 space.add(segment_body_top, segment_shape)
 
 segment_body_left = pymunk.Body(body_type=pymunk.Body.STATIC)
 segment_shape = pymunk.Segment(segment_body_left, (75, screen.get_height() - 600), (75, screen.get_height() - 100), 5)
 segment_shape.elasticity = 0.85
-segment_shape.friction = 0.9
 space.add(segment_body_left, segment_shape)
 
 test_ball = pymunk.Body(1, pymunk.moment_for_circle(1, 0, 18))
 test_ball.position = (200, (((2*screen.get_height()) - 700)/2))
 test_shape = pymunk.Circle(test_ball, 18)
 test_shape.elasticity = 0.95
+test_shape.friction = 0.85  # Adding friction to the shape
 test_shape.damping = 0.5  # Increasing damping for more noticeable effect
 space.add(test_ball, test_shape)
-
-pocket_positions = [
-    (75, screen.get_height() - 100),  # Bottom left corner
-    (screen.get_width() - 75, screen.get_height() - 100),  # Bottom right corner
-    (75, screen.get_height() - 600),  # Top left corner
-    (screen.get_width() - 75, screen.get_height() - 600),  # Top right corner
-    (screen.get_width() // 2, screen.get_height() - 100),  # Bottom middle
-    (screen.get_width() // 2, screen.get_height() - 600)   # Top middle
-]
-
-def create_pocket(space, position, radius):
-    body = pymunk.Body(body_type=pymunk.Body.STATIC)  # Pockets are static
-    shape = pymunk.Circle(body, radius)
-    shape.position = position
-    shape.elasticity = 0.0  # Pockets don't bounce
-    shape.friction = 0.0
-    space.add(body, shape)
-    return shape
-
-# # Create pockets in the physics space
-# pocket_radius = 0  # Adjust as necessary
-# pockets = [create_pocket(space, pos, pocket_radius) for pos in pocket_positions]
 
 # Cue stick properties
 cue_length = 300
@@ -79,8 +62,29 @@ cue_angle = 0
 pull_back_distance = 0
 is_pulling_back = False
 
+# Create pockets
+pocket_radius = 30
+pocket_positions = [
+    (75, screen.get_height() - 100),  # Bottom left
+    (screen.get_width() - 75, screen.get_height() - 100),  # Bottom right
+    (75, screen.get_height() - 600),  # Top left
+    (screen.get_width() - 75, screen.get_height() - 600),  # Top right
+    (screen.get_width() / 2, screen.get_height() - 600),  # Center top
+    (screen.get_width() / 2, screen.get_height() - 100)  # Bottom middle
+]
+pockets = []
+for position in pocket_positions:
+    pocket_body = pymunk.Body(body_type=pymunk.Body.STATIC)
+    pocket_shape = pymunk.Circle(pocket_body, pocket_radius)
+    pocket_shape.elasticity = 0.0  # Pockets should not bounce
+    pocket_shape.sensor = True  # Use as a sensor
+    pocket_body.position = position
+    pocket_shape.collision_type = COLLISION_TYPE_POCKET
+    space.add(pocket_body, pocket_shape)
+    pockets.append(pocket_shape)
 rows = 5
 radius = 18
+color_count = 0
 
 # Create balls in a triangular formation
 for row in range(rows):
@@ -88,7 +92,7 @@ for row in range(rows):
         # Calculate the position of each ball
         x = row * (radius * 2) + 900  # Positioning vertically (now horizontal)
         y = (col - row / 2) * (radius * 2) + (((2*screen.get_height()) - 700)/2)  # Centering the triangle vertically
-        create_ball(space, (x, y), radius)
+        ball_list.append(create_ball(space, (x, y), radius))
 
 
 def convert_coordinates(point): # converting pygame coordinates to pymunk coordinates (pymunk coordinates put the origin in the bottom left corner
@@ -98,6 +102,19 @@ def convert_coordinates(point): # converting pygame coordinates to pymunk coordi
 class Ball(pygame.Rect):
     def __init__(self, x, y):
         super().__init__(x, y)
+
+# Define a collision handler
+def collision_handler(arbiter, space, data):
+    # Get the bodies involved in the collision
+    body1, body2 = arbiter.shapes[0].body, arbiter.shapes[1].body
+    # Remove the body from the space
+    space.remove(body1, arbiter.shapes[0])  # Remove the first body and its shape
+    print("Bodies removed due to collision!")
+    return True  # Return True to keep the collision from being resolved
+# Set up the collision handler in the space
+handler = space.add_collision_handler(COLLISION_TYPE_BALL, COLLISION_TYPE_POCKET)
+handler.begin = collision_handler
+
 
 
 while True:
@@ -131,7 +148,7 @@ while True:
     ball_pos = test_ball.position
     cue_angle = math.atan2(mouse_y - (screen.get_height() - ball_pos.y), mouse_x - ball_pos.x)
 
-    if is_pulling_back and pull_back_distance <= 20:
+    if is_pulling_back and pull_back_distance <= 15:
         pull_back_distance += 1  # Increment pull back distance while the key is held down
 
 
@@ -144,18 +161,31 @@ while True:
     # Render the graphics here.
     # ...
 
+    for shape in space.shapes:
+        position = shape.body.position
+        if color_count % 2 == 0:
+            pygame.draw.circle(screen, (0, 0, 255), (int(position.x), int(position.y)), radius)
+            color_count += 1
+        elif color_count % 2 == 1:
+            pygame.draw.circle(screen, (255, 0, 0), (int(position.x), int(position.y)), radius)
+            color_count += 1
+        if color_count == 15:
+            pygame.draw.circle(screen, (0, 0, 255), (int(position.x), int(position.y)), radius)
+            color_count += 1
+
+
 
     pygame.draw.line(screen, 'black', (75, screen.get_height() - 100), (screen.get_width() - 75, screen.get_height() - 100), 5 )
     pygame.draw.line(screen, 'black', (screen.get_width() - 75, screen.get_height() - 100), (screen.get_width() - 75, screen.get_height() - 600), 5 )
     pygame.draw.line(screen, 'black', (screen.get_width() - 75, screen.get_height() - 600), (75, screen.get_height() - 600), 5 )
     pygame.draw.line(screen, 'black', (75, screen.get_height() - 600), (75, screen.get_height() - 100), 5 )
 
-    for shape in space.shapes:
-        position = shape.body.position
-        pygame.draw.circle(screen, (0, 0, 0), (int(position.x), int(position.y)), radius)
+    # Draw pockets
+    for pocket in pockets:
+        position = pocket.body.position
+        pygame.draw.circle(screen, (100, 100, 100), (int(position.x), int(position.y)), pocket_radius)
 
-
-    pygame.draw.circle(screen, (0, 0, 255), (int(test_ball.position.x), int(test_ball.position.y)), 18)
+    pygame.draw.circle(screen, (0, 255, 0), (int(test_ball.position.x), int(test_ball.position.y)), 18)
 
 
         # Check if the test ball is not moving
@@ -176,5 +206,5 @@ while True:
 
 
     pygame.display.flip()  # Refresh on-screen display
-    clock.tick(120) # wait until next frame (at 60 FPS)
-    space.step(1/120) # 60 FPS
+    clock.tick(60) # wait until next frame (at 60 FPS)
+    space.step(1/60) # 60 FPS
