@@ -72,6 +72,7 @@ pocket_positions = [
     (screen.get_width() / 2, screen.get_height() - 600),  # Center top
     (screen.get_width() / 2, screen.get_height() - 100)  # Bottom middle
 ]
+
 pockets = []
 for position in pocket_positions:
     pocket_body = pymunk.Body(body_type=pymunk.Body.STATIC)
@@ -82,6 +83,7 @@ for position in pocket_positions:
     pocket_shape.collision_type = COLLISION_TYPE_POCKET
     space.add(pocket_body, pocket_shape)
     pockets.append(pocket_shape)
+
 rows = 5
 radius = 18
 color_count = 0
@@ -107,15 +109,17 @@ class Ball(pygame.Rect):
 def collision_handler(arbiter, space, data):
     # Get the bodies involved in the collision
     body1, body2 = arbiter.shapes[0].body, arbiter.shapes[1].body
+
     # Remove the body from the space
     space.remove(body1, arbiter.shapes[0])  # Remove the first body and its shape
+
     print("Bodies removed due to collision!")
     return True  # Return True to keep the collision from being resolved
+
+
 # Set up the collision handler in the space
 handler = space.add_collision_handler(COLLISION_TYPE_BALL, COLLISION_TYPE_POCKET)
 handler.begin = collision_handler
-
-
 
 while True:
     # Process player inputs.
@@ -156,6 +160,8 @@ while True:
     # ...
 
 
+
+
     screen.fill("white")  # Fill the display with a solid color
 
     # Render the graphics here.
@@ -181,6 +187,11 @@ while True:
     pygame.draw.line(screen, 'black', (75, screen.get_height() - 600), (75, screen.get_height() - 100), 5 )
 
     # Draw pockets
+    for pocket in pockets:
+        position = pocket.body.position
+        pygame.draw.circle(screen, (100, 100, 100), (int(position.x), int(position.y)), pocket_radius)
+
+# Draw pockets
     for pocket in pockets:
         position = pocket.body.position
         pygame.draw.circle(screen, (100, 100, 100), (int(position.x), int(position.y)), pocket_radius)
