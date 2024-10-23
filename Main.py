@@ -19,7 +19,7 @@ player_2 = 1
 
 test_ball_image = pygame.image.load("ball_16.png")
 ball_images = []
-for i in range(1, 17):
+for i in range(1, 16):
     ball_image = pygame.image.load(f"ball_{i}.png").convert_alpha()
     ball_images.append(ball_image)
 
@@ -208,14 +208,16 @@ while True:
     #         count_one += 1
 
     # Draw balls with images
-    for i, shape in enumerate(space.shapes):
-        position = shape.body.position
+    for i, shape in enumerate(ball_list):
+        position = shape.position
         # Draw the circle for visual reference (optional)
         pygame.draw.circle(screen, (0, 0, 0), (int(position.x), int(position.y)), radius)
 
         # Blit the corresponding ball image if available
         if i < len(ball_images):  # Ensure the image exists for this ball
             screen.blit(ball_images[i], (int(position.x) - radius, int(position.y) - radius))
+
+
 
 
     # Draw pockets
