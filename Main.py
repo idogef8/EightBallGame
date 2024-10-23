@@ -7,9 +7,25 @@ pygame.init()
 screen = pygame.display.set_mode((1280,720))
 
 clock = pygame.time.Clock()
+pygame.font.init()  # you have to call this at the start,
+# if you want to use this module.
+my_font = pygame.font.SysFont('Comic Sans MS', 30)
+
+count = 0
+player_1 = 0
+player_2 = 1
+
+# load images
+
+test_ball_image = pygame.image.load("ball_16.png")
+ball_images = []
+for i in range(1, 17):
+    ball_image = pygame.image.load(f"ball_{i}.png").convert_alpha()
+    ball_images.append(ball_image)
+
 
 space = pymunk.Space() # initialized the space in which the physics sim occurs
-space.damping = .6
+space.damping = .5
 ball_list = []
 
 COLLISION_TYPE_BALL = 1
@@ -93,7 +109,6 @@ for row in range(rows):
         ball_list.append(create_ball(space, (x, y), radius))
 
 
-
 def convert_coordinates(point): # converting pygame coordinates to pymunk coordinates (pymunk coordinates put the origin in the bottom left corner
     return point[0], screen.get_height() - point[1]
 
@@ -101,6 +116,13 @@ def convert_coordinates(point): # converting pygame coordinates to pymunk coordi
 class Ball(pygame.Rect):
     def __init__(self, x, y):
         super().__init__(x, y)
+
+class Text():
+    def __init__(self, words):
+        text_surface = my_font.render(words, False, (0, 0, 0))
+        screen.blit(text_surface, (20, 0))
+
+
 
 # Define a collision handler
 def collision_handler(arbiter, space, data):
@@ -110,7 +132,6 @@ def collision_handler(arbiter, space, data):
     # Remove the body from the space
     space.remove(body1, arbiter.shapes[0])  # Remove the first body and its shape
 
-    print("Bodies removed due to collision!")
     return True  # Return True to keep the collision from being resolved
 
 
@@ -119,6 +140,7 @@ handler = space.add_collision_handler(COLLISION_TYPE_BALL, COLLISION_TYPE_POCKET
 handler.begin = collision_handler
 
 while True:
+
     # Process player inputs.
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -141,6 +163,7 @@ while True:
                     test_ball.apply_impulse_at_world_point(force_vector, (0, 0))
                     is_pulling_back = False
                     force_vector = 0
+                    count += 1
 
 
 
@@ -156,31 +179,53 @@ while True:
     # Do logical updates here.
     # ...
 
-
+    player_up = count % 2
 
 
     screen.fill("white")  # Fill the display with a solid color
+    if player_up == player_1:
+        text1 = Text("Player 1's turn!")
+    elif player_up == player_2:
+        text2 = Text("Player 2's turn!")
 
     # Render the graphics here.
     # ...
 
+    pygame.draw.rect(screen, 'forest Green', (75, screen.get_height() - 600, 1130, 500))
 
     pygame.draw.line(screen, 'black', (75, screen.get_height() - 100), (screen.get_width() - 75, screen.get_height() - 100), 5 )
     pygame.draw.line(screen, 'black', (screen.get_width() - 75, screen.get_height() - 100), (screen.get_width() - 75, screen.get_height() - 600), 5 )
     pygame.draw.line(screen, 'black', (screen.get_width() - 75, screen.get_height() - 600), (75, screen.get_height() - 600), 5 )
     pygame.draw.line(screen, 'black', (75, screen.get_height() - 600), (75, screen.get_height() - 100), 5 )
 
-    for shape in space.shapes:
+    count_one = 0
+
+    # for shape in space.shapes:
+    #     position = shape.body.position
+    #     pygame.draw.circle(screen, (0, 0, 0), (int(position.x), int(position.y)), radius)
+    #     if count_one == 17:
+    #         screen.blit(ball_images[count_one], (int(position.x), int(position.y)))
+    #         count_one += 1
+
+    # Draw balls with images
+    for i, shape in enumerate(space.shapes):
         position = shape.body.position
+        # Draw the circle for visual reference (optional)
         pygame.draw.circle(screen, (0, 0, 0), (int(position.x), int(position.y)), radius)
+
+        # Blit the corresponding ball image if available
+        if i < len(ball_images):  # Ensure the image exists for this ball
+            screen.blit(ball_images[i], (int(position.x) - radius, int(position.y) - radius))
+
 
     # Draw pockets
     for pocket in pockets:
         position = pocket.body.position
         pygame.draw.circle(screen, (100, 100, 100), (int(position.x), int(position.y)), pocket_radius)
 
-    pygame.draw.circle(screen, (0, 0, 255), (int(test_ball.position.x), int(test_ball.position.y)), 18)
 
+    pygame.draw.circle(screen, (0, 0, 255), (int(test_ball.position.x), int(test_ball.position.y)), 18)
+    screen.blit(test_ball_image, (test_ball.position.x - 18, test_ball.position.y - 18))
 
         # Check if the test ball is not moving
     if test_ball.velocity.length < 1:  # Check if the speed is less than 1
@@ -193,10 +238,8 @@ while True:
         pygame.draw.line(screen, 'black', cue_start, cue_end, 10)
 
         pygame.draw.line(screen, 'black', cue_start, cue_end, 10)
-    # In your main loop, apply friction to each ball
-    # for shape in space.shapes:
-    #     if isinstance(shape, pymunk.Circle):  # Assuming your balls are Circles
-    #         apply_friction(shape.body)
+
+
 
 
     pygame.display.flip()  # Refresh on-screen display
