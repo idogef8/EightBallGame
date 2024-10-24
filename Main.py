@@ -19,6 +19,8 @@ player_2 = 1
 
 test_ball_image = pygame.image.load("ball_16.png")
 ball_images = []
+
+cue_stick_image = pygame.image.load("cue.png")
 for i in range(1, 16):
     ball_image = pygame.image.load(f"ball_{i}.png").convert_alpha()
     ball_images.append(ball_image)
@@ -70,7 +72,7 @@ test_shape.damping = 0.5  # Increasing damping for more noticeable effect
 space.add(test_ball, test_shape)
 
 # Cue stick properties
-cue_length = 300
+cue_length = 550
 cue_angle = 0
 pull_back_distance = 0
 is_pulling_back = False
@@ -220,6 +222,9 @@ while True:
 
 
 
+
+
+
     # Draw pockets
     for pocket in pockets:
         position = pocket.body.position
@@ -235,14 +240,19 @@ while True:
         cue_start = (ball_pos.x, ball_pos.y)
         cue_vector = ball_pos - pygame.mouse.get_pos()
         cue_vector = cue_vector.normalized()
-        cue_end = cue_start + -cue_vector * cue_length#(ball_pos.x + cue_length * math.cos(cue_angle),
-                   #    ball_pos.y + cue_length * math.sin(cue_angle))
-        pygame.draw.line(screen, 'black', cue_start, cue_end, 10)
+        cue_end = cue_start + -cue_vector * cue_length
 
         pygame.draw.line(screen, 'black', cue_start, cue_end, 10)
 
+        # Calculate angle for rotation
+        cue_angle_degrees = -math.degrees(cue_angle)  # Convert to degrees for rotation
+        cue_stick_rotated = pygame.transform.rotate(cue_stick_image, cue_angle_degrees)
 
+        # Get the rect for positioning
+        cue_stick_rect = cue_stick_rotated.get_rect(center=cue_start)
 
+        # Blit the rotated cue stick image
+        screen.blit(cue_stick_rotated, cue_stick_rect.topleft)
 
     pygame.display.flip()  # Refresh on-screen display
     clock.tick(60) # wait until next frame (at 60 FPS)
