@@ -63,13 +63,13 @@ segment_shape = pymunk.Segment(segment_body_left, (75, screen.get_height() - 600
 segment_shape.elasticity = 0.85
 space.add(segment_body_left, segment_shape)
 
-test_ball = pymunk.Body(1, pymunk.moment_for_circle(1, 0, 18))
-test_ball.position = (200, (((2*screen.get_height()) - 700)/2))
-test_shape = pymunk.Circle(test_ball, 18)
-test_shape.elasticity = 0.95
-test_shape.friction = 0.85  # Adding friction to the shape
-test_shape.damping = 0.5  # Increasing damping for more noticeable effect
-space.add(test_ball, test_shape)
+cue_ball = pymunk.Body(1, pymunk.moment_for_circle(1, 0, 18))
+cue_ball.position = (200, (((2 * screen.get_height()) - 700) / 2))
+cue_ball_shape = pymunk.Circle(cue_ball, 18)
+cue_ball_shape.elasticity = 0.95
+cue_ball_shape.friction = 0.85  # Adding friction to the shape
+cue_ball_shape.damping = 0.5  # Increasing damping for more noticeable effect
+space.add(cue_ball, cue_ball_shape)
 
 # Cue stick properties
 cue_length = 550
@@ -124,7 +124,25 @@ class Text():
         text_surface = my_font.render(words, False, (0, 0, 0))
         screen.blit(text_surface, (20, 0))
 
+class Cue():
+  def __init__(self, pos):
+    self.original_image = cue_stick_image
+    self.angle = 0
+    self.image = pygame.transform.rotate(self.original_image, self.angle)
+    self.rect = self.image.get_rect()
+    self.rect.center = pos
 
+  def update(self, angle):
+    self.angle = angle
+
+  def draw(self, surface):
+    self.image = pygame.transform.rotate(self.original_image, self.angle)
+    surface.blit(self.image,
+      (self.rect.centerx - self.image.get_width() / 2,
+      self.rect.centery - self.image.get_height() / 2)
+     )
+
+cue = Cue(cue_ball.position)
 
 # Define a collision handler
 def collision_handler(arbiter, space, data):
@@ -150,19 +168,19 @@ while True:
             raise SystemExit
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
-                if test_ball.velocity.x < 1 and test_ball.velocity.y < 1:
+                if cue_ball.velocity.x < 1 and cue_ball.velocity.y < 1:
                     is_pulling_back = True
                     pull_back_distance = 0  # Reset the pullback distance
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_SPACE:
-                if test_ball.velocity.x < 1 and test_ball.velocity.y < 1:
+                if cue_ball.velocity.x < 1 and cue_ball.velocity.y < 1:
                     # Calculate the force to apply based on the pullback distance
-                    direction = test_ball.position - (pygame.mouse.get_pos())
+                    direction = cue_ball.position - (pygame.mouse.get_pos())
                     direction = direction.normalized()
                     force_magnitude = pull_back_distance * 100  # Adjust the multiplier as needed
                     force_vector = direction*force_magnitude #-Vec2d(math.cos(cue_angle), math.sin(cue_angle)) * force_magnitude
                     # test_ball.apply_impulse_at_local_point(force_vector, (0, 0))
-                    test_ball.apply_impulse_at_world_point(force_vector, (0, 0))
+                    cue_ball.apply_impulse_at_world_point(force_vector, (0, 0))
                     is_pulling_back = False
                     force_vector = 0
                     count += 1
@@ -171,7 +189,7 @@ while True:
 
     mouse_x, mouse_y = pygame.mouse.get_pos()
     mouse_pos = Vec2d(mouse_x, mouse_y)
-    ball_pos = test_ball.position
+    ball_pos = cue_ball.position
     cue_angle = math.atan2(mouse_y - (screen.get_height() - ball_pos.y), mouse_x - ball_pos.x)
 
     if is_pulling_back and pull_back_distance <= 15:
@@ -213,8 +231,6 @@ while True:
     for i, shape in enumerate(ball_list):
         position = shape.position
         # Draw the circle for visual reference (optional)
-        pygame.draw.circle(screen, (0, 0, 0), (int(position.x), int(position.y)), radius)
-
         # Blit the corresponding ball image if available
         if i < len(ball_images):  # Ensure the image exists for this ball
             screen.blit(ball_images[i], (int(position.x) - radius, int(position.y) - radius))
@@ -231,11 +247,11 @@ while True:
         pygame.draw.circle(screen, (100, 100, 100), (int(position.x), int(position.y)), pocket_radius)
 
 
-    pygame.draw.circle(screen, (0, 0, 255), (int(test_ball.position.x), int(test_ball.position.y)), 18)
-    screen.blit(test_ball_image, (test_ball.position.x - 18, test_ball.position.y - 18))
+    pygame.draw.circle(screen, (0, 0, 255), (int(cue_ball.position.x), int(cue_ball.position.y)), 18)
+    screen.blit(test_ball_image, (cue_ball.position.x - 18, cue_ball.position.y - 18))
 
         # Check if the test ball is not moving
-    if test_ball.velocity.length < 1:  # Check if the speed is less than 1
+    if cue_ball.velocity.length < 1:  # Check if the speed is less than 1
         # Draw the cue stick
         cue_start = (ball_pos.x, ball_pos.y)
         cue_vector = ball_pos - pygame.mouse.get_pos()
