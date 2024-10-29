@@ -1,5 +1,7 @@
+
 import pygame, pymunk, math
 from pymunk import Vec2d
+from pymunk.examples.collisions import post_solve
 from pymunk.vec2d import Vec2d
 
 pygame.init()
@@ -20,11 +22,6 @@ player_2 = 1
 test_ball_image = pygame.image.load("ball_16.png")
 ball_images = []
 
-cue_stick_image = pygame.image.load("cue.png")
-for i in range(1, 16):
-    ball_image = pygame.image.load(f"ball_{i}.png").convert_alpha()
-    ball_images.append(ball_image)
-
 
 space = pymunk.Space() # initialized the space in which the physics sim occurs
 space.damping = .5
@@ -32,16 +29,34 @@ ball_list = []
 
 COLLISION_TYPE_BALL = 1
 COLLISION_TYPE_POCKET = 2
+class Ball(pymunk.Body):
+    def __init__(self, x, y, image):
+        super().__init__(1, pymunk.moment_for_circle(1, 0, 18))
+        self.image = image
+        self.radius = 18
+        self.position = (x, y)
+        shape = pymunk.Circle(self, self.radius)
+        shape.elasticity = 0.95
+        shape.damping = 0.5  # Increasing damping for more noticeable effect
+        shape.collision_type = COLLISION_TYPE_BALL
+        space.add(self, shape)
 
-def create_ball(space, position, radius):
-    body = pymunk.Body(1, pymunk.moment_for_circle(1, 0, radius))
-    body.position = position
-    shape = pymunk.Circle(body, radius)
-    shape.elasticity = 0.95
-    shape.damping = 0.5  # Increasing damping for more noticeable effect
-    space.add(body, shape)
-    shape.collision_type = COLLISION_TYPE_BALL
-    return body
+    def draw(self, screen):
+        pygame.draw.circle(screen, (0, 0, 0), self.position, self.radius)
+        screen.blit(self.image, (self.position[0]-self.radius, self.position[1]-self.radius))
+
+
+
+# def create_ball(space, position, radius):
+#     body = pymunk.Body(1, pymunk.moment_for_circle(1, 0, radius))
+#     body.position = position
+#     shape = pymunk.Circle(body, radius)
+#     shape.elasticity = 0.95
+#     shape.damping = 0.5  # Increasing damping for more noticeable effect
+#     space.add(body, shape)
+#     shape.collision_type = COLLISION_TYPE_BALL
+#     return body
+#     # return Ball()
 
 segment_body_bottom = pymunk.Body(body_type=pymunk.Body.STATIC)
 segment_shape = pymunk.Segment(segment_body_bottom, (75, screen.get_height() - 100), (screen.get_width() - 75, screen.get_height() - 100), 5)
@@ -103,21 +118,23 @@ rows = 5
 radius = 18
 
 # Create balls in a triangular formation
+i = 1
 for row in range(rows):
     for col in range(row + 1):
         # Calculate the position of each ball
         x = row * (radius * 2) + 900  # Positioning vertically (now horizontal)
         y = (col - row / 2) * (radius * 2) + (((2*screen.get_height()) - 700)/2)  # Centering the triangle vertically
-        ball_list.append(create_ball(space, (x, y), radius))
+        ball_list.append(Ball(x, y, pygame.image.load(f"ball_{i}.png").convert_alpha()))
+        i += 1
+
+
+cue_stick_image = pygame.image.load("cue.png")
 
 
 def convert_coordinates(point): # converting pygame coordinates to pymunk coordinates (pymunk coordinates put the origin in the bottom left corner
     return point[0], screen.get_height() - point[1]
 
 
-class Ball(pygame.Rect):
-    def __init__(self, x, y):
-        super().__init__(x, y)
 
 class Text():
     def __init__(self, words):
@@ -132,7 +149,12 @@ def collision_handler(arbiter, space, data):
     body1, body2 = arbiter.shapes[0].body, arbiter.shapes[1].body
 
     # Remove the body from the space
-    space.remove(body1, arbiter.shapes[0])  # Remove the first body and its shape
+    if body1 in ball_list and body2 not in ball_list:
+        ball_list.remove(body1)
+        space.remove(body1, arbiter.shapes[0])  # Remove the first body and its shape
+    if body2 in ball_list and body1 not in ball_list:
+        ball_list.remove(body2)
+        space.remove(body2, arbiter.shapes[1])  # Remove the first body and its shape
 
     return True  # Return True to keep the collision from being resolved
 
@@ -140,6 +162,8 @@ def collision_handler(arbiter, space, data):
 # Set up the collision handler in the space
 handler = space.add_collision_handler(COLLISION_TYPE_BALL, COLLISION_TYPE_POCKET)
 handler.begin = collision_handler
+
+
 
 while True:
 
@@ -202,22 +226,17 @@ while True:
 
     count_one = 0
 
-    # for shape in space.shapes:
-    #     position = shape.body.position
-    #     pygame.draw.circle(screen, (0, 0, 0), (int(position.x), int(position.y)), radius)
-    #     if count_one == 17:
-    #         screen.blit(ball_images[count_one], (int(position.x), int(position.y)))
-    #         count_one += 1
-
     # Draw balls with images
-    for i, shape in enumerate(ball_list):
-        position = shape.position
+    for ball in ball_list:
+        # position = ball.x, ball.y
         # Draw the circle for visual reference (optional)
-        pygame.draw.circle(screen, (0, 0, 0), (int(position.x), int(position.y)), radius)
+        # pygame.draw.circle(screen, (0, 0, 0), (int(position[0]), int(position[1])), radius)
+        ball.draw(screen)
 
         # Blit the corresponding ball image if available
-        if i < len(ball_images):  # Ensure the image exists for this ball
-            screen.blit(ball_images[i], (int(position.x) - radius, int(position.y) - radius))
+        # if i < len(ball_images):  # Ensure the image exists for this ball
+        #     screen.blit(ball_images[i], (int(position[0]) - radius, int(position[1]) - radius))
+        #     screen.blit(ball_list[i].image, (int(position[0]) - radius, int(position[1]) - radius))
 
 
 
