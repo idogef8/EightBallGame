@@ -42,21 +42,8 @@ class Ball(pymunk.Body):
         space.add(self, shape)
 
     def draw(self, screen):
-        pygame.draw.circle(screen, (0, 0, 0), self.position, self.radius)
         screen.blit(self.image, (self.position[0]-self.radius, self.position[1]-self.radius))
 
-
-
-# def create_ball(space, position, radius):
-#     body = pymunk.Body(1, pymunk.moment_for_circle(1, 0, radius))
-#     body.position = position
-#     shape = pymunk.Circle(body, radius)
-#     shape.elasticity = 0.95
-#     shape.damping = 0.5  # Increasing damping for more noticeable effect
-#     space.add(body, shape)
-#     shape.collision_type = COLLISION_TYPE_BALL
-#     return body
-#     # return Ball()
 
 segment_body_bottom = pymunk.Body(body_type=pymunk.Body.STATIC)
 segment_shape = pymunk.Segment(segment_body_bottom, (75, screen.get_height() - 100), (screen.get_width() - 75, screen.get_height() - 100), 5)
@@ -228,15 +215,7 @@ while True:
 
     # Draw balls with images
     for ball in ball_list:
-        # position = ball.x, ball.y
-        # Draw the circle for visual reference (optional)
-        # pygame.draw.circle(screen, (0, 0, 0), (int(position[0]), int(position[1])), radius)
         ball.draw(screen)
-
-        # Blit the corresponding ball image if available
-        # if i < len(ball_images):  # Ensure the image exists for this ball
-        #     screen.blit(ball_images[i], (int(position[0]) - radius, int(position[1]) - radius))
-        #     screen.blit(ball_list[i].image, (int(position[0]) - radius, int(position[1]) - radius))
 
 
 
