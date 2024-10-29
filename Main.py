@@ -27,6 +27,8 @@ ball_list = []
 
 COLLISION_TYPE_BALL = 1
 COLLISION_TYPE_POCKET = 2
+COLLISION_TYPE_TEST_BALL = 3
+
 class Ball(pymunk.Body):
     def __init__(self, x, y, image):
         super().__init__(1, pymunk.moment_for_circle(1, 0, 18))
@@ -69,6 +71,7 @@ test_shape = pymunk.Circle(test_ball, 18)
 test_shape.elasticity = 0.95
 test_shape.friction = 0.85  # Adding friction to the shape
 test_shape.damping = 0.5  # Increasing damping for more noticeable effect
+test_shape.collision_type = COLLISION_TYPE_TEST_BALL
 space.add(test_ball, test_shape)
 
 # Cue stick properties
@@ -162,10 +165,25 @@ def collision_handler(arbiter, space, data):
 
     return True  # Return True to keep the collision from being resolved
 
+def collision_handler2(arbiter, space, data):
+    body1, body2 = arbiter.shapes[0].body, arbiter.shapes[1].body
+    # Remove the body from the space
+    if body1 is test_ball and body2 is not test_ball:
+        test_ball.position = (200, (((2*screen.get_height()) - 700)/2))
+        test_ball.velocity.x = 0
+        test_ball.velocity.y = 0
+    if body2 is test_ball and body1 is not test_ball:
+        test_ball.position = (200, (((2 * screen.get_height()) - 700) / 2))
+        test_ball.velocity.x = 0
+        test_ball.velocity.y = 0
+
 
 # Set up the collision handler in the space
 handler = space.add_collision_handler(COLLISION_TYPE_BALL, COLLISION_TYPE_POCKET)
 handler.begin = collision_handler
+
+handler2 = space.add_collision_handler(COLLISION_TYPE_TEST_BALL, COLLISION_TYPE_POCKET)
+handler2.begin = collision_handler2
 
 
 
