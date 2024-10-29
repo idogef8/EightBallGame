@@ -177,20 +177,20 @@ while True:
                     # Calculate the force to apply based on the pullback distance
                     direction = cue_ball.position - (pygame.mouse.get_pos())
                     direction = direction.normalized()
-                    force_magnitude = pull_back_distance * 100  # Adjust the multiplier as needed
-                    force_vector = direction*force_magnitude #-Vec2d(math.cos(cue_angle), math.sin(cue_angle)) * force_magnitude
-                    # test_ball.apply_impulse_at_local_point(force_vector, (0, 0))
+                    force_magnitude = pull_back_distance * -100  # Adjust the multiplier as needed
+                    force_vector = direction*force_magnitude
                     cue_ball.apply_impulse_at_world_point(force_vector, (0, 0))
                     is_pulling_back = False
                     force_vector = 0
                     count += 1
 
-
-
-    mouse_x, mouse_y = pygame.mouse.get_pos()
-    mouse_pos = Vec2d(mouse_x, mouse_y)
-    ball_pos = cue_ball.position
-    cue_angle = math.atan2(mouse_y - (screen.get_height() - ball_pos.y), mouse_x - ball_pos.x)
+    mouse_pos = pygame.mouse.get_pos()
+    cue.rect.center = cue_ball.position
+    x_dist = cue_ball.position[0] - mouse_pos[0]
+    y_dist = -(cue_ball.position[1] - mouse_pos[1])  # -ve because pygame y coordinates increase down the screen
+    cue_angle = math.degrees(math.atan2(y_dist, x_dist))
+    cue.update(cue_angle)
+    cue.draw(screen)
 
     if is_pulling_back and pull_back_distance <= 15:
         pull_back_distance += 1  # Increment pull back distance while the key is held down
@@ -220,13 +220,6 @@ while True:
 
     count_one = 0
 
-    # for shape in space.shapes:
-    #     position = shape.body.position
-    #     pygame.draw.circle(screen, (0, 0, 0), (int(position.x), int(position.y)), radius)
-    #     if count_one == 17:
-    #         screen.blit(ball_images[count_one], (int(position.x), int(position.y)))
-    #         count_one += 1
-
     # Draw balls with images
     for i, shape in enumerate(ball_list):
         position = shape.position
@@ -234,13 +227,6 @@ while True:
         # Blit the corresponding ball image if available
         if i < len(ball_images):  # Ensure the image exists for this ball
             screen.blit(ball_images[i], (int(position.x) - radius, int(position.y) - radius))
-
-
-
-
-
-
-
     # Draw pockets
     for pocket in pockets:
         position = pocket.body.position
@@ -250,26 +236,24 @@ while True:
     pygame.draw.circle(screen, (0, 0, 255), (int(cue_ball.position.x), int(cue_ball.position.y)), 18)
     screen.blit(test_ball_image, (cue_ball.position.x - 18, cue_ball.position.y - 18))
 
-        # Check if the test ball is not moving
+        # Check if the cue ball is not moving
     if cue_ball.velocity.length < 1:  # Check if the speed is less than 1
-        # Draw the cue stick
-        cue_start = (ball_pos.x, ball_pos.y)
-        cue_vector = ball_pos - pygame.mouse.get_pos()
-        cue_vector = cue_vector.normalized()
-        cue_end = cue_start + -cue_vector * cue_length
+        cue_stick_length = 150  # Length of the cue stick
+        cue_stick_start = cue_ball.position
 
-        pygame.draw.line(screen, 'black', cue_start, cue_end, 10)
+        # Calculate the end position of the cue stick based on the angle
+        cue_stick_end = (
+            cue_stick_start[0] - cue_stick_length * math.cos(math.radians(cue_angle)),
+            cue_stick_start[1] + cue_stick_length * math.sin(math.radians(cue_angle))
+        )
 
-        # Calculate angle for rotation
-        cue_angle_degrees = -math.degrees(cue_angle)  # Convert to degrees for rotation
-        cue_stick_rotated = pygame.transform.rotate(cue_stick_image, cue_angle_degrees)
+        # Rotate and draw the cue stick
+        cue_stick_rotated = pygame.transform.rotate(cue_stick_image, cue_angle)  # Negate angle for proper rotation
+        cue_stick_rect = cue_stick_rotated.get_rect(center=cue_stick_start)
 
-        # Get the rect for positioning
-        cue_stick_rect = cue_stick_rotated.get_rect(center=cue_start)
-
-        # Blit the rotated cue stick image
+        # Draw the cue stick with the correct position
         screen.blit(cue_stick_rotated, cue_stick_rect.topleft)
 
     pygame.display.flip()  # Refresh on-screen display
-    clock.tick(60) # wait until next frame (at 60 FPS)
-    space.step(1/60) # running the simulation
+    clock.tick(60)  # Wait until next frame (at 60 FPS)
+    space.step(1 / 60)  # Running the simulation
