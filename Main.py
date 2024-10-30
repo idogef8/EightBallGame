@@ -22,7 +22,7 @@ player_2 = 1
 test_ball_image = pygame.image.load("ball_16.png")
 
 space = pymunk.Space() # initialized the space in which the physics sim occurs
-space.damping = .5
+space.damping = 0.4
 ball_list = []
 
 COLLISION_TYPE_BALL = 1
@@ -66,6 +66,7 @@ segment_shape.elasticity = 0.85
 space.add(segment_body_left, segment_shape)
 
 test_ball = pymunk.Body(1, pymunk.moment_for_circle(1, 0, 18))
+test_ball.body_type = pymunk.Body.DYNAMIC
 test_ball.position = (200, (((2*screen.get_height()) - 700)/2))
 test_shape = pymunk.Circle(test_ball, 18)
 test_shape.elasticity = 0.95
@@ -170,12 +171,10 @@ def collision_handler2(arbiter, space, data):
     # Remove the body from the space
     if body1 is test_ball and body2 is not test_ball:
         test_ball.position = (200, (((2*screen.get_height()) - 700)/2))
-        test_ball.velocity.x = 0
-        test_ball.velocity.y = 0
+        test_ball.velocity = (0, 0)
     if body2 is test_ball and body1 is not test_ball:
         test_ball.position = (200, (((2 * screen.get_height()) - 700) / 2))
-        test_ball.velocity.x = 0
-        test_ball.velocity.y = 0
+        test_ball.velocity = (0, 0)
 
 
 # Set up the collision handler in the space
