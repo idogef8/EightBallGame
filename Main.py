@@ -13,9 +13,8 @@ pygame.font.init()  # you have to call this at the start,
 # if you want to use this module.
 my_font = pygame.font.SysFont('Roboto', 30)
 
-count = 0
-player_1 = 0
-player_2 = 1
+counter = 0
+count_hits = 0
 
 # load images
 
@@ -43,7 +42,6 @@ class Ball(pymunk.Body):
 
     def draw(self, screen):
         screen.blit(self.image, (self.position[0]-self.radius, self.position[1]-self.radius))
-
 
 segment_body_bottom = pymunk.Body(body_type=pymunk.Body.STATIC)
 segment_shape = pymunk.Segment(segment_body_bottom, (75, screen.get_height() - 100), (screen.get_width() - 75, screen.get_height() - 100), 5)
@@ -116,14 +114,10 @@ for row in range(rows):
         ball_list.append(Ball(x, y, pygame.image.load(f"ball_{i}.png").convert_alpha()))
         i += 1
 
-
 cue_stick_image = pygame.image.load("cue.png")
-
 
 def convert_coordinates(point): # converting pygame coordinates to pymunk coordinates (pymunk coordinates put the origin in the bottom left corner
     return point[0], screen.get_height() - point[1]
-
-
 
 class Text():
     def __init__(self, words):
@@ -150,32 +144,37 @@ class Cue():
 
 cue = Cue(test_ball.position)
 
-
 # Define a collision handler
 def collision_handler(arbiter, space, data):
+    global counter
     # Get the bodies involved in the collision
     body1, body2 = arbiter.shapes[0].body, arbiter.shapes[1].body
+
 
     # Remove the body from the space
     if body1 in ball_list and body2 not in ball_list:
         ball_list.remove(body1)
         space.remove(body1, arbiter.shapes[0])  # Remove the first body and its shape
+        counter += 1
     if body2 in ball_list and body1 not in ball_list:
         ball_list.remove(body2)
         space.remove(body2, arbiter.shapes[1])  # Remove the first body and its shape
+        counter += 1
 
     return True  # Return True to keep the collision from being resolved
 
 def collision_handler2(arbiter, space, data):
+    global counter
     body1, body2 = arbiter.shapes[0].body, arbiter.shapes[1].body
     # Remove the body from the space
     if body1 is test_ball and body2 is not test_ball:
         test_ball.position = (200, (((2*screen.get_height()) - 700)/2))
         test_ball.velocity = (0, 0)
+        counter -= 1
     if body2 is test_ball and body1 is not test_ball:
         test_ball.position = (200, (((2 * screen.get_height()) - 700) / 2))
         test_ball.velocity = (0, 0)
-
+        counter -= 1
 
 # Set up the collision handler in the space
 handler = space.add_collision_handler(COLLISION_TYPE_BALL, COLLISION_TYPE_POCKET)
@@ -183,8 +182,6 @@ handler.begin = collision_handler
 
 handler2 = space.add_collision_handler(COLLISION_TYPE_TEST_BALL, COLLISION_TYPE_POCKET)
 handler2.begin = collision_handler2
-
-
 
 while True:
 
@@ -206,18 +203,12 @@ while True:
                     direction = direction.normalized()
                     force_magnitude = pull_back_distance * -100  # Adjust the multiplier as needed
                     force_vector = direction*force_magnitude #-Vec2d(math.cos(cue_angle), math.sin(cue_angle)) * force_magnitude
-                    # test_ball.apply_impulse_at_local_point(force_vector, (0, 0))
                     test_ball.apply_impulse_at_world_point(force_vector, (0, 0))
+                    count_hits += 1
                     is_pulling_back = False
                     force_vector = 0
-                    count += 1
 
-
-
-    # mouse_x, mouse_y = pygame.mouse.get_pos()
-    # mouse_pos = Vec2d(mouse_x, mouse_y)
     ball_pos = test_ball.position
-    # cue_angle = math.atan2(mouse_y - (screen.get_height() - ball_pos.y), mouse_x - ball_pos.x)
 
     mouse_pos = pygame.mouse.get_pos()
     cue.rect.center = test_ball.position
@@ -230,18 +221,11 @@ while True:
     if is_pulling_back and pull_back_distance <= 15:
         pull_back_distance += 1  # Increment pull back distance while the key is held down
 
-
     # Do logical updates here.
     # ...
 
-    player_up = count % 2
-
-
     screen.fill("white")  # Fill the display with a solid color
-    if player_up == player_1:
-        text1 = Text("Player 1's turn!")
-    elif player_up == player_2:
-        text2 = Text("Player 2's turn!")
+    text1 = Text("Score: " + str(count_hits))
 
     # Render the graphics here.
     # ...
@@ -252,8 +236,6 @@ while True:
     pygame.draw.line(screen, 'black', (screen.get_width() - 75, screen.get_height() - 100), (screen.get_width() - 75, screen.get_height() - 600), 5 )
     pygame.draw.line(screen, 'black', (screen.get_width() - 75, screen.get_height() - 600), (75, screen.get_height() - 600), 5 )
     pygame.draw.line(screen, 'black', (75, screen.get_height() - 600), (75, screen.get_height() - 100), 5 )
-
-    count_one = 0
 
     # Draw balls with images
     for ball in ball_list:
@@ -277,37 +259,13 @@ while True:
         # Draw the cue stick with the correct position
         screen.blit(cue_stick_rotated, cue_stick_rect.topleft)
 
-
-
-
-
     # Draw pockets
     for pocket in pockets:
         position = pocket.body.position
         pygame.draw.circle(screen, (100, 100, 100), (int(position.x), int(position.y)), pocket_radius)
 
-
     pygame.draw.circle(screen, (0, 0, 255), (int(test_ball.position.x), int(test_ball.position.y)), 18)
     screen.blit(test_ball_image, (test_ball.position.x - 18, test_ball.position.y - 18))
-
-        # Check if the test ball is not moving
-    # if test_ball.velocity.length < 1:  # Check if the speed is less than 1
-    #     # Draw the cue stick
-    #     cue_start = (ball_pos.x, ball_pos.y)
-    #     cue_vector = ball_pos - pygame.mouse.get_pos()
-    #     cue_vector = cue_vector.normalized()
-    #     cue_end = cue_start + -cue_vector * cue_length
-    #
-    #
-    #     # Calculate angle for rotation
-    #     cue_angle_degrees = -math.degrees(cue_angle)  # Convert to degrees for rotation
-    #     cue_stick_rotated = pygame.transform.rotate(cue_stick_image, cue_angle_degrees)
-    #
-    #     # Get the rect for positioning
-    #     cue_stick_rect = cue_stick_rotated.get_rect(center=cue_start)
-    #
-    #     # Blit the rotated cue stick image
-    #     screen.blit(cue_stick_rotated, cue_stick_rect.topleft)
 
     pygame.display.flip()  # Refresh on-screen display
     clock.tick(60) # wait until next frame (at 60 FPS)
