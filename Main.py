@@ -225,7 +225,7 @@ while True:
     # ...
 
     screen.fill("white")  # Fill the display with a solid color
-    text1 = Text("Score: " + str(count_hits))
+    text1 = Text("Number of Hits: " + str(count_hits))
 
     # Render the graphics here.
     # ...
